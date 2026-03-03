@@ -21,7 +21,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscureConfirm = true;
   String? _selectedRole;
 
-  final List<String> _roles = ['Farmer', 'Agronomist', 'Researcher', 'Admin'];
+  final List<String> _roles = ['Farmer', 'Admin'];
 
   String? _nameError, _emailError, _passError, _confirmError, _roleError;
 
