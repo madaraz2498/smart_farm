@@ -5,7 +5,12 @@ import '../providers/auth_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../utils/app_theme.dart';
 import '../widgets/auth_widgets.dart';
-import 'feature_screens.dart';
+import 'plant_disease_screen.dart';
+import 'animal_weight_screen.dart';
+import 'crop_recommendation_screen.dart';
+import 'soil_analysis_screen.dart';
+import 'fruit_quality_screen.dart';
+import 'chatbot_screen.dart';
 import 'reports_screen.dart';
 import 'settings_screen.dart';
 
@@ -13,15 +18,15 @@ class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
   static const _navItems = [
-    _NavItem(icon: Icons.home_outlined,           label: 'Welcome',                 svg: 'assets/images/icons/welcome_icon.svg'),
+    _NavItem(icon: Icons.home_outlined,           label: 'Welcome',                 svg: null),
     _NavItem(icon: Icons.local_florist_outlined,  label: 'Plant Disease Detection',  svg: 'assets/images/icons/plant_icon.svg'),
     _NavItem(icon: Icons.monitor_weight_outlined, label: 'Animal Weight Estimation', svg: 'assets/images/icons/animal_icon.svg'),
     _NavItem(icon: Icons.grass_outlined,          label: 'Crop Recommendation',      svg: 'assets/images/icons/crop_icon.svg'),
     _NavItem(icon: Icons.layers_outlined,         label: 'Soil Type Analysis',       svg: 'assets/images/icons/soil_icon.svg'),
     _NavItem(icon: Icons.apple_outlined,          label: 'Fruit Quality Analysis',   svg: 'assets/images/icons/fruit_icon.svg'),
     _NavItem(icon: Icons.chat_bubble_outline,     label: 'Smart Farm Chatbot',       svg: 'assets/images/icons/chat_icon.svg'),
-    _NavItem(icon: Icons.bar_chart_outlined,      label: 'Reports',                  svg: 'assets/images/icons/reports_icon.svg'),
-    _NavItem(icon: Icons.settings_outlined,       label: 'Settings',                 svg: 'assets/images/icons/settings_icon.svg'),
+    _NavItem(icon: Icons.bar_chart_outlined,      label: 'Reports',                  svg: null),
+    _NavItem(icon: Icons.settings_outlined,       label: 'Settings',                 svg: null),
   ];
 
   static const _features = [
