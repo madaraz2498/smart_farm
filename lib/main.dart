@@ -2,19 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import 'theme/app_theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/navigation_provider.dart';
 import 'screens/auth_wrapper.dart';
-import 'utils/app_theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
   ]);
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor:          Colors.transparent,
+    statusBarIconBrightness: Brightness.dark,
+    statusBarBrightness:     Brightness.light,
+  ));
   runApp(const SmartFarmApp());
 }
 
@@ -29,10 +33,11 @@ class SmartFarmApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => NavigationProvider()),
       ],
       child: MaterialApp(
-        title: 'Smart Farm AI',
+        title:                      'Smart Farm AI',
         debugShowCheckedModeBanner: false,
-        theme: AppTheme.theme,
-        home: const AuthWrapper(),
+        theme:     AppTheme.light,
+        themeMode: ThemeMode.light,
+        home:      const AuthWrapper(),
       ),
     );
   }

@@ -1,81 +1,82 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import '../utils/app_theme.dart';
+import '../theme/app_theme.dart';
+import '../widgets/custom_app_bar.dart';
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CROP RECOMMENDATION SCREEN
+// Layout:
+//   White card: "Environmental Parameters" section header + form fields
+//               (Temperature, Humidity, Rainfall, Soil Type dropdown)
+//               + Recommend Crop button
+//   White card: "Recommendation Result" with Recommended Crop (highlighted),
+//               Expected Yield Level, explanation text
+// ═══════════════════════════════════════════════════════════════════════════════
 
 // ─── Controller ───────────────────────────────────────────────────────────────
 
 enum CropRecommendationStatus { idle, loading, result, error }
 
+class CropResult {
+  final String crop;
+  final String yieldLevel;   // 'High', 'Medium', 'Low'
+  final String explanation;
+  const CropResult({
+    required this.crop,
+    required this.yieldLevel,
+    required this.explanation,
+  });
+}
+
 class CropRecommendationController extends ChangeNotifier {
   CropRecommendationStatus _status = CropRecommendationStatus.idle;
-  List<_CropResult>? _results;
-  String? _errorMessage;
+  CropResult?              _result;
+  String?                  _errorMessage;
+  String                   _selectedSoilType = 'Sandy';
 
-  // Form fields
   final temperatureCtrl = TextEditingController();
   final humidityCtrl    = TextEditingController();
-  final phCtrl          = TextEditingController();
   final rainfallCtrl    = TextEditingController();
-  final nitrogenCtrl    = TextEditingController();
-  final phosphorusCtrl  = TextEditingController();
-  final potassiumCtrl   = TextEditingController();
 
-  String _selectedSoilType = 'Loamy';
-  final soilTypes = ['Sandy', 'Loamy', 'Clay', 'Silt', 'Peaty', 'Saline'];
+  static const List<String> soilTypes = [
+    'Sandy', 'Loamy', 'Clay', 'Silt', 'Peaty', 'Saline'
+  ];
 
-  CropRecommendationStatus get status       => _status;
-  List<_CropResult>?       get results      => _results;
-  String?                  get errorMessage => _errorMessage;
+  CropRecommendationStatus get status          => _status;
+  CropResult?              get result          => _result;
+  String?                  get errorMessage    => _errorMessage;
   String                   get selectedSoilType => _selectedSoilType;
 
-  void setSoilType(String type) {
-    _selectedSoilType = type;
-    notifyListeners();
-  }
+  void setSoilType(String t) { _selectedSoilType = t; notifyListeners(); }
 
-  bool validate() {
-    return temperatureCtrl.text.isNotEmpty &&
-        humidityCtrl.text.isNotEmpty &&
-        phCtrl.text.isNotEmpty &&
-        rainfallCtrl.text.isNotEmpty;
-  }
+  bool validate() =>
+      temperatureCtrl.text.isNotEmpty &&
+      humidityCtrl.text.isNotEmpty &&
+      rainfallCtrl.text.isNotEmpty;
 
-  /// TODO: Replace mock with real API call (POST form data)
-  Future<void> getRecommendation() async {
-    if (!validate()) return;
+  // TODO: POST to YOUR_API/crop-recommend
+  // Body: { temperature, humidity, rainfall, soil_type }
+  // Response: { "crop": String, "yield_level": String, "explanation": String }
+  Future<void> recommend() async {
     _status       = CropRecommendationStatus.loading;
-    _results      = null;
+    _result       = null;
     _errorMessage = null;
     notifyListeners();
-
     try {
-      // ── TODO: Replace with real API call ──────────────────────────────
-      // final response = await http.post(Uri.parse('YOUR_API_URL/crop-recommend'),
-      //   body: {
-      //     'temperature': temperatureCtrl.text,
-      //     'humidity': humidityCtrl.text,
-      //     'ph': phCtrl.text,
-      //     'rainfall': rainfallCtrl.text,
-      //     'nitrogen': nitrogenCtrl.text,
-      //     'phosphorus': phosphorusCtrl.text,
-      //     'potassium': potassiumCtrl.text,
-      //     'soil_type': _selectedSoilType,
-      //   },
-      // );
-      // final body = jsonDecode(response.body);
-      // _results = (body['recommendations'] as List).map((r) =>
-      //   _CropResult(name: r['crop'], suitability: r['score'].toDouble(), reason: r['reason'])
-      // ).toList();
-      // ─────────────────────────────────────────────────────────────────
-
       await Future.delayed(const Duration(seconds: 2));
-      _results = [
-        _CropResult(name: 'Wheat',   suitability: 0.94, reason: 'Ideal temperature and rainfall match'),
-        _CropResult(name: 'Barley',  suitability: 0.87, reason: 'Good soil pH compatibility'),
-        _CropResult(name: 'Lentils', suitability: 0.78, reason: 'Suitable humidity levels'),
-      ];
+      final temp     = temperatureCtrl.text;
+      final humidity = humidityCtrl.text;
+      final rainfall = rainfallCtrl.text;
+      _result = CropResult(
+        crop:       'Cotton',
+        yieldLevel: 'Medium',
+        explanation:
+            'Based on the provided climate and soil conditions '
+            '(Temperature: ${temp}°C, Humidity: $humidity%, '
+            'Rainfall: ${rainfall}mm), Cotton is recommended with '
+            'an expected medium yield potential.',
+      );
       _status = CropRecommendationStatus.result;
-    } catch (e) {
+    } catch (_) {
       _errorMessage = 'Failed to get recommendation. Please try again.';
       _status       = CropRecommendationStatus.error;
     }
@@ -84,7 +85,7 @@ class CropRecommendationController extends ChangeNotifier {
 
   void reset() {
     _status       = CropRecommendationStatus.idle;
-    _results      = null;
+    _result       = null;
     _errorMessage = null;
     notifyListeners();
   }
@@ -93,407 +94,431 @@ class CropRecommendationController extends ChangeNotifier {
   void dispose() {
     temperatureCtrl.dispose();
     humidityCtrl.dispose();
-    phCtrl.dispose();
     rainfallCtrl.dispose();
-    nitrogenCtrl.dispose();
-    phosphorusCtrl.dispose();
-    potassiumCtrl.dispose();
     super.dispose();
   }
-}
-
-class _CropResult {
-  final String name;
-  final double suitability;
-  final String reason;
-  const _CropResult({required this.name, required this.suitability, required this.reason});
 }
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 class CropRecommendationScreen extends StatefulWidget {
   const CropRecommendationScreen({super.key});
-
   @override
-  State<CropRecommendationScreen> createState() => _CropRecommendationScreenState();
+  State<CropRecommendationScreen> createState() =>
+      _CropRecommendationScreenState();
 }
 
 class _CropRecommendationScreenState extends State<CropRecommendationScreen> {
-  final _controller = CropRecommendationController();
+  final _ctrl = CropRecommendationController();
   String? _validationError;
 
   @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+  void dispose() { _ctrl.dispose(); super.dispose(); }
 
   void _submit() {
-    if (!_controller.validate()) {
-      setState(() => _validationError = 'Please fill in at least Temperature, Humidity, pH, and Rainfall.');
+    if (!_ctrl.validate()) {
+      setState(() => _validationError =
+          'Please fill in Temperature, Humidity, and Rainfall.');
       return;
     }
     setState(() => _validationError = null);
-    _controller.getRecommendation();
+    _ctrl.recommend();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.surface,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        leading: IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: AppColors.textDark),
-        ),
-        title: Row(
-          children: [
-            Container(
-              width: 32, height: 32,
-              decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(8)),
-              child: Center(child: SvgPicture.asset('assets/images/icons/crop_icon.svg', width: 18, height: 18)),
-            ),
-            const SizedBox(width: 10),
-            const Text('Crop Recommendation',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-          ],
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(height: 1, color: AppColors.border),
-        ),
+      appBar: const FeatureAppBar(
+        title:   'Crop Recommendation (ML)',
+        svgPath: 'assets/images/icons/crop_icon.svg',
       ),
       body: AnimatedBuilder(
-        animation: _controller,
-        builder: (_, __) => SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 560),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 4),
-
-                  if (_controller.status != CropRecommendationStatus.result) ...[
-                    // ── Soil type ─────────────────────────────────────
-                    _SectionLabel('Soil Type'),
-                    const SizedBox(height: 10),
-                    _SoilTypeSelector(
-                      types: _controller.soilTypes,
-                      selected: _controller.selectedSoilType,
-                      onSelect: _controller.setSoilType,
-                    ),
-                    const SizedBox(height: 20),
-
-                    // ── Required fields ───────────────────────────────
-                    _SectionLabel('Climate & Soil Data'),
-                    const SizedBox(height: 4),
-                    const Text('* Required fields',
-                        style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                    const SizedBox(height: 12),
-
-                    Row(children: [
-                      Expanded(child: _FormField(
-                        controller: _controller.temperatureCtrl,
-                        label: 'Temperature *',
-                        hint: 'e.g. 25',
-                        suffix: '°C',
-                        keyboardType: TextInputType.number,
-                      )),
-                      const SizedBox(width: 12),
-                      Expanded(child: _FormField(
-                        controller: _controller.humidityCtrl,
-                        label: 'Humidity *',
-                        hint: 'e.g. 70',
-                        suffix: '%',
-                        keyboardType: TextInputType.number,
-                      )),
-                    ]),
-                    const SizedBox(height: 12),
-
-                    Row(children: [
-                      Expanded(child: _FormField(
-                        controller: _controller.phCtrl,
-                        label: 'Soil pH *',
-                        hint: 'e.g. 6.5',
-                        suffix: 'pH',
-                        keyboardType: TextInputType.number,
-                      )),
-                      const SizedBox(width: 12),
-                      Expanded(child: _FormField(
-                        controller: _controller.rainfallCtrl,
-                        label: 'Rainfall *',
-                        hint: 'e.g. 200',
-                        suffix: 'mm',
-                        keyboardType: TextInputType.number,
-                      )),
-                    ]),
-                    const SizedBox(height: 20),
-
-                    // ── Optional NPK ──────────────────────────────────
-                    _SectionLabel('NPK Values (Optional)'),
-                    const SizedBox(height: 12),
-
-                    Row(children: [
-                      Expanded(child: _FormField(
-                        controller: _controller.nitrogenCtrl,
-                        label: 'Nitrogen',
-                        hint: 'e.g. 40',
-                        suffix: 'kg/ha',
-                        keyboardType: TextInputType.number,
-                      )),
-                      const SizedBox(width: 12),
-                      Expanded(child: _FormField(
-                        controller: _controller.phosphorusCtrl,
-                        label: 'Phosphorus',
-                        hint: 'e.g. 20',
-                        suffix: 'kg/ha',
-                        keyboardType: TextInputType.number,
-                      )),
-                      const SizedBox(width: 12),
-                      Expanded(child: _FormField(
-                        controller: _controller.potassiumCtrl,
-                        label: 'Potassium',
-                        hint: 'e.g. 30',
-                        suffix: 'kg/ha',
-                        keyboardType: TextInputType.number,
-                      )),
-                    ]),
-                    const SizedBox(height: 20),
-
-                    // ── Validation error ──────────────────────────────
-                    if (_validationError != null) ...[
-                      _ErrorBanner(_validationError!),
-                      const SizedBox(height: 12),
-                    ],
-                    if (_controller.status == CropRecommendationStatus.error) ...[
-                      _ErrorBanner(_controller.errorMessage!),
-                      const SizedBox(height: 12),
-                    ],
-
-                    // ── Submit button ─────────────────────────────────
-                    SizedBox(
-                      width: double.infinity, height: 50,
-                      child: ElevatedButton(
-                        onPressed: _controller.status == CropRecommendationStatus.loading ? null : _submit,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          disabledBackgroundColor: AppColors.primary.withOpacity(0.6),
-                        ),
-                        child: _controller.status == CropRecommendationStatus.loading
-                            ? const SizedBox(width: 22, height: 22,
-                                child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-                            : const Text('Get Recommendation',
-                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-                      ),
-                    ),
-                  ],
-
-                  // ── Results ───────────────────────────────────────
-                  if (_controller.status == CropRecommendationStatus.result) ...[
-                    _ResultsSection(results: _controller.results!, onReset: _controller.reset),
-                  ],
-                ],
-              ),
-            ),
-          ),
+        animation: _ctrl,
+        builder: (context, _) => _Body(
+          ctrl:            _ctrl,
+          onSubmit:        _submit,
+          validationError: _validationError,
         ),
       ),
     );
   }
 }
 
-// ─── Widgets ──────────────────────────────────────────────────────────────────
+// ─── Body ─────────────────────────────────────────────────────────────────────
 
-class _SectionLabel extends StatelessWidget {
-  final String text;
-  const _SectionLabel(this.text);
-  @override
-  Widget build(BuildContext context) =>
-      Text(text, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark));
-}
+class _Body extends StatelessWidget {
+  final CropRecommendationController ctrl;
+  final VoidCallback                 onSubmit;
+  final String?                      validationError;
 
-class _SoilTypeSelector extends StatelessWidget {
-  final List<String> types;
-  final String selected;
-  final ValueChanged<String> onSelect;
-
-  const _SoilTypeSelector({required this.types, required this.selected, required this.onSelect});
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: types.map((t) {
-        final isSelected = t == selected;
-        return GestureDetector(
-          onTap: () => onSelect(t),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: isSelected ? AppColors.primary : AppColors.surface,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: isSelected ? AppColors.primary : AppColors.border),
-            ),
-            child: Text(t,
-                style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: isSelected ? Colors.white : AppColors.textDark)),
-          ),
-        );
-      }).toList(),
-    );
-  }
-}
-
-class _FormField extends StatelessWidget {
-  final TextEditingController controller;
-  final String label;
-  final String hint;
-  final String suffix;
-  final TextInputType keyboardType;
-
-  const _FormField({
-    required this.controller,
-    required this.label,
-    required this.hint,
-    required this.suffix,
-    required this.keyboardType,
+  const _Body({
+    required this.ctrl,
+    required this.onSubmit,
+    this.validationError,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textDark)),
-        const SizedBox(height: 6),
-        TextField(
-          controller: controller,
-          keyboardType: keyboardType,
-          style: const TextStyle(fontSize: 14, color: AppColors.textDark),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: const TextStyle(fontSize: 13, color: AppColors.textMuted),
-            suffixText: suffix,
-            suffixStyle: const TextStyle(fontSize: 12, color: AppColors.textMuted),
-            filled: true,
-            fillColor: AppColors.surface,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.border),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppColors.border),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl, AppSpacing.lg, AppSpacing.xl, AppSpacing.xxxl),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Form card
+              _FormCard(
+                ctrl:            ctrl,
+                onSubmit:        onSubmit,
+                validationError: validationError,
+              ),
+              const SizedBox(height: AppSpacing.xl),
+
+              // Result card
+              if (ctrl.status == CropRecommendationStatus.result &&
+                  ctrl.result != null)
+                _ResultCard(result: ctrl.result!),
+
+              if (ctrl.status == CropRecommendationStatus.error &&
+                  ctrl.errorMessage != null) ...[
+                const SizedBox(height: AppSpacing.xl),
+                _ErrorBanner(ctrl.errorMessage!),
+              ],
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
 }
 
-class _ResultsSection extends StatelessWidget {
-  final List<_CropResult> results;
-  final VoidCallback onReset;
+// ─── Form card ────────────────────────────────────────────────────────────────
 
-  const _ResultsSection({required this.results, required this.onReset});
+class _FormCard extends StatelessWidget {
+  final CropRecommendationController ctrl;
+  final VoidCallback                 onSubmit;
+  final String?                      validationError;
+
+  const _FormCard({
+    required this.ctrl,
+    required this.onSubmit,
+    this.validationError,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text('Recommended Crops',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-            TextButton(
-              onPressed: onReset,
-              child: const Text('Try Again', style: TextStyle(color: AppColors.primary, fontSize: 13)),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        ...results.asMap().entries.map((e) {
-          final rank   = e.key + 1;
-          final result = e.value;
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Container(
-              padding: const EdgeInsets.all(16),
+    final tt = Theme.of(context).textTheme;
+    final cs = Theme.of(context).colorScheme;
+
+    return Container(
+      width:   double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      decoration: BoxDecoration(
+        color:        AppColors.surface,
+        borderRadius: AppRadius.radiusLg,
+        border:       Border.all(color: AppColors.border),
+        boxShadow:    AppShadows.sm,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section header
+          Row(children: [
+            Container(
+              width: 40, height: 40,
               decoration: BoxDecoration(
-                color: rank == 1 ? AppColors.primaryLight : AppColors.surface,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: rank == 1 ? AppColors.primary.withOpacity(0.4) : AppColors.border,
-                  width: rank == 1 ? 1.5 : 1,
-                ),
+                color:        AppColors.primaryLight,
+                borderRadius: AppRadius.radiusMd,
               ),
-              child: Row(
+              child: const Icon(Icons.eco_outlined,
+                  color: AppColors.primary, size: 20),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Text('Environmental Parameters',
+                style: tt.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textDark)),
+          ]),
+          const SizedBox(height: AppSpacing.xl),
+
+          // Temperature
+          _FieldLabel('Temperature (°C)'),
+          const SizedBox(height: AppSpacing.sm),
+          _TextField(
+              controller: ctrl.temperatureCtrl,
+              hint:       '25',
+              type:       TextInputType.number),
+          const SizedBox(height: AppSpacing.lg),
+
+          // Humidity
+          _FieldLabel('Humidity (%)'),
+          const SizedBox(height: AppSpacing.sm),
+          _TextField(
+              controller: ctrl.humidityCtrl,
+              hint:       '65',
+              type:       TextInputType.number),
+          const SizedBox(height: AppSpacing.lg),
+
+          // Rainfall
+          _FieldLabel('Rainfall (mm)'),
+          const SizedBox(height: AppSpacing.sm),
+          _TextField(
+              controller: ctrl.rainfallCtrl,
+              hint:       '120',
+              type:       TextInputType.number),
+          const SizedBox(height: AppSpacing.lg),
+
+          // Soil Type dropdown
+          _FieldLabel('Soil Type'),
+          const SizedBox(height: AppSpacing.sm),
+          _SoilDropdown(ctrl: ctrl),
+          const SizedBox(height: AppSpacing.xl),
+
+          // Validation error
+          if (validationError != null) ...[
+            _ErrorBanner(validationError!),
+            const SizedBox(height: AppSpacing.lg),
+          ],
+
+          // Submit button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: ctrl.status == CropRecommendationStatus.loading
+                  ? null
+                  : onSubmit,
+              style: ElevatedButton.styleFrom(
+                padding:         const EdgeInsets.symmetric(vertical: 16),
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape:           RoundedRectangleBorder(
+                    borderRadius: AppRadius.radiusFull),
+                elevation: 0,
+              ),
+              child: ctrl.status == CropRecommendationStatus.loading
+                  ? const SizedBox(
+                      width: 20, height: 20,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white))
+                  : const Text('Recommend Crop',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w600, fontSize: 15)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Soil dropdown ────────────────────────────────────────────────────────────
+
+class _SoilDropdown extends StatelessWidget {
+  final CropRecommendationController ctrl;
+  const _SoilDropdown({required this.ctrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color:        AppColors.surfaceAlt,
+        borderRadius: AppRadius.radiusMd,
+        border:       Border.all(color: AppColors.border),
+      ),
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg, vertical: 4),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value:     ctrl.selectedSoilType,
+          isExpanded: true,
+          icon:      const Icon(Icons.keyboard_arrow_down_rounded,
+              color: AppColors.textMuted),
+          style:     const TextStyle(
+              fontSize: 14, color: AppColors.textDark),
+          dropdownColor: AppColors.surface,
+          borderRadius:  BorderRadius.circular(12),
+          items: CropRecommendationController.soilTypes
+              .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+              .toList(),
+          onChanged: (v) {
+            if (v != null) ctrl.setSoilType(v);
+          },
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Result card ──────────────────────────────────────────────────────────────
+
+class _ResultCard extends StatelessWidget {
+  final CropResult result;
+  const _ResultCard({required this.result});
+
+  Color get _yieldColor {
+    switch (result.yieldLevel) {
+      case 'High':   return AppColors.primary;
+      case 'Medium': return AppColors.warning;
+      default:       return AppColors.error;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tt = Theme.of(context).textTheme;
+
+    return Container(
+      width:   double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      decoration: BoxDecoration(
+        color:        AppColors.surface,
+        borderRadius: AppRadius.radiusLg,
+        border:       Border.all(color: AppColors.border),
+        boxShadow:    AppShadows.sm,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Recommendation Result',
+              style: tt.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600, color: AppColors.textDark)),
+          const SizedBox(height: AppSpacing.lg),
+
+          // Recommended crop highlighted box
+          Container(
+            width:   double.infinity,
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              color:        AppColors.primaryLight,
+              borderRadius: AppRadius.radiusMd,
+              border:       Border.all(
+                  color: AppColors.primary.withOpacity(0.25)),
+            ),
+            child: Row(children: [
+              Container(
+                width: 36, height: 36,
+                decoration: BoxDecoration(
+                  color:        AppColors.primary.withOpacity(0.15),
+                  borderRadius: AppRadius.radiusSm,
+                ),
+                child: const Icon(Icons.eco_outlined,
+                    color: AppColors.primary, size: 18),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 36, height: 36,
-                    decoration: BoxDecoration(
-                      color: rank == 1 ? AppColors.primary : AppColors.border,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Center(
-                      child: Text('#$rank',
-                          style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: rank == 1 ? Colors.white : AppColors.textMuted)),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(result.name,
-                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-                        const SizedBox(height: 2),
-                        Text(result.reason,
-                            style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
-                        const SizedBox(height: 6),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
-                          child: LinearProgressIndicator(
-                            value: result.suitability,
-                            minHeight: 5,
-                            backgroundColor: AppColors.primary.withOpacity(0.1),
-                            valueColor: const AlwaysStoppedAnimation(AppColors.primary),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text('${(result.suitability * 100).toInt()}%',
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                  Text('Recommended Crop',
+                      style: tt.bodySmall?.copyWith(
+                          color: AppColors.primary)),
+                  const SizedBox(height: 2),
+                  Text(result.crop,
+                      style: tt.titleMedium?.copyWith(
+                        color:      AppColors.textDark,
+                        fontWeight: FontWeight.w700,
+                      )),
+                ],
+              ),
+            ]),
+          ),
+          const SizedBox(height: AppSpacing.md),
+
+          // Expected Yield Level
+          Container(
+            width:   double.infinity,
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+            decoration: BoxDecoration(
+              color:        AppColors.surface,
+              borderRadius: AppRadius.radiusMd,
+              border:       Border.all(color: AppColors.border),
+            ),
+            child: RichText(
+              text: TextSpan(
+                style: tt.bodyMedium?.copyWith(color: AppColors.textDark),
+                children: [
+                  const TextSpan(
+                      text: 'Expected Yield Level: ',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  TextSpan(
+                      text: result.yieldLevel,
+                      style: TextStyle(
+                          color: _yieldColor,
+                          fontWeight: FontWeight.w600)),
                 ],
               ),
             ),
-          );
-        }),
-      ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+
+          // Explanation text
+          Container(
+            width:   double.infinity,
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              color:        AppColors.surface,
+              borderRadius: AppRadius.radiusMd,
+              border:       Border.all(color: AppColors.border),
+            ),
+            child: Text(result.explanation,
+                style: tt.bodySmall?.copyWith(
+                    color: AppColors.textMuted, height: 1.5)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Shared helpers ───────────────────────────────────────────────────────────
+
+class _FieldLabel extends StatelessWidget {
+  final String text;
+  const _FieldLabel(this.text);
+
+  @override
+  Widget build(BuildContext context) => Text(text,
+      style: Theme.of(context)
+          .textTheme
+          .bodyMedium
+          ?.copyWith(color: AppColors.textDark));
+}
+
+class _TextField extends StatelessWidget {
+  final TextEditingController controller;
+  final String                hint;
+  final TextInputType         type;
+  const _TextField(
+      {required this.controller, required this.hint, required this.type});
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller:  controller,
+      keyboardType: type,
+      style: const TextStyle(fontSize: 14, color: AppColors.textDark),
+      decoration: InputDecoration(
+        hintText:         hint,
+        hintStyle: const TextStyle(
+            fontSize: 14, color: AppColors.textDisabled),
+        filled:           true,
+        fillColor:        AppColors.surfaceAlt,
+        contentPadding:   const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg, vertical: 14),
+        border: OutlineInputBorder(
+            borderRadius: AppRadius.radiusMd,
+            borderSide:   const BorderSide(color: AppColors.border)),
+        enabledBorder: OutlineInputBorder(
+            borderRadius: AppRadius.radiusMd,
+            borderSide:   const BorderSide(color: AppColors.border)),
+        focusedBorder: OutlineInputBorder(
+            borderRadius: AppRadius.radiusMd,
+            borderSide:   const BorderSide(
+                color: AppColors.primary, width: 1.5)),
+      ),
     );
   }
 }
@@ -501,20 +526,27 @@ class _ResultsSection extends StatelessWidget {
 class _ErrorBanner extends StatelessWidget {
   final String message;
   const _ErrorBanner(this.message);
+
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: const Color(0xFFFEF2F2),
-      borderRadius: BorderRadius.circular(10),
-      border: Border.all(color: const Color(0xFFFECACA)),
-    ),
-    child: Row(
-      children: [
-        const Icon(Icons.error_outline, size: 16, color: Color(0xFFEF4444)),
-        const SizedBox(width: 8),
-        Expanded(child: Text(message, style: const TextStyle(fontSize: 13, color: Color(0xFFEF4444)))),
-      ],
-    ),
-  );
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color:        AppColors.errorLight,
+        borderRadius: AppRadius.radiusMd,
+        border:       Border.all(color: AppColors.errorBorder),
+      ),
+      child: Row(children: [
+        const Icon(Icons.error_outline, size: 16, color: AppColors.error),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: Text(message,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: AppColors.error)),
+        ),
+      ]),
+    );
+  }
 }

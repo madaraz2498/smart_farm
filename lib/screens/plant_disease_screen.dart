@@ -1,49 +1,58 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import '../utils/app_theme.dart';
+import '../theme/app_theme.dart';
+import '../widgets/custom_app_bar.dart';
 
-// ─── Provider / Controller ────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// PLANT DISEASE DETECTION SCREEN
+// Layout:
+//   Page heading + subtitle
+//   White card: leaf icon / image preview / Choose Image + Analyze Image
+//   White card: "Analysis Result" with Status badge row + Confidence bar
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── Controller ───────────────────────────────────────────────────────────────
 
 enum PlantScanStatus { idle, loading, result, error }
 
+class PlantDiseaseResult {
+  final String  status;     // e.g. "Healthy Plant" or disease name
+  final bool    isHealthy;
+  final double  confidence; // 0.0 – 1.0
+  const PlantDiseaseResult({
+    required this.status,
+    required this.isHealthy,
+    required this.confidence,
+  });
+}
+
 class PlantDiseaseController extends ChangeNotifier {
-  PlantScanStatus _status = PlantScanStatus.idle;
-  String? _imagePath;
-  String? _resultLabel;
-  double? _confidence;
-  String? _errorMessage;
+  PlantScanStatus     _status = PlantScanStatus.idle;
+  String?             _imagePath;
+  PlantDiseaseResult? _result;
+  String?             _errorMessage;
 
-  PlantScanStatus get status      => _status;
-  String?         get imagePath   => _imagePath;
-  String?         get resultLabel => _resultLabel;
-  double?         get confidence  => _confidence;
-  String?         get errorMessage => _errorMessage;
+  PlantScanStatus     get status       => _status;
+  String?             get imagePath    => _imagePath;
+  PlantDiseaseResult? get result       => _result;
+  String?             get errorMessage => _errorMessage;
 
-  /// Call this with the picked image path, then hit the API.
-  /// Replace the body of this method with your actual API call.
+  // TODO: POST multipart to YOUR_API/plant-disease
+  // Response: { "status": String, "is_healthy": bool, "confidence": double }
   Future<void> analyzeImage(String path) async {
-    _imagePath = path;
-    _status    = PlantScanStatus.loading;
-    _resultLabel = null;
+    _imagePath    = path;
+    _status       = PlantScanStatus.loading;
+    _result       = null;
     _errorMessage = null;
     notifyListeners();
-
     try {
-      // ── TODO: Replace with real API call ──────────────────────────────
-      // final request = http.MultipartRequest('POST', Uri.parse('YOUR_API_URL'));
-      // request.files.add(await http.MultipartFile.fromPath('image', path));
-      // final response = await request.send();
-      // final body = jsonDecode(await response.stream.bytesToString());
-      // _resultLabel = body['disease'];
-      // _confidence  = body['confidence'];
-      // ─────────────────────────────────────────────────────────────────
-
-      // Mock result for now
       await Future.delayed(const Duration(seconds: 2));
-      _resultLabel = 'Early Blight';
-      _confidence  = 0.91;
-      _status      = PlantScanStatus.result;
-    } catch (e) {
+      _result = const PlantDiseaseResult(
+        status:     'Healthy Plant',
+        isHealthy:  true,
+        confidence: 0.95,
+      );
+      _status = PlantScanStatus.result;
+    } catch (_) {
       _errorMessage = 'Analysis failed. Please try again.';
       _status       = PlantScanStatus.error;
     }
@@ -53,8 +62,7 @@ class PlantDiseaseController extends ChangeNotifier {
   void reset() {
     _status       = PlantScanStatus.idle;
     _imagePath    = null;
-    _resultLabel  = null;
-    _confidence   = null;
+    _result       = null;
     _errorMessage = null;
     notifyListeners();
   }
@@ -64,139 +72,75 @@ class PlantDiseaseController extends ChangeNotifier {
 
 class PlantDiseaseScreen extends StatefulWidget {
   const PlantDiseaseScreen({super.key});
-
   @override
   State<PlantDiseaseScreen> createState() => _PlantDiseaseScreenState();
 }
 
 class _PlantDiseaseScreenState extends State<PlantDiseaseScreen> {
-  final _controller = PlantDiseaseController();
-
+  final _ctrl = PlantDiseaseController();
   @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+  void dispose() { _ctrl.dispose(); super.dispose(); }
 
-  void _pickImage(String source) {
-    // TODO: Replace with image_picker
-    // final picker = ImagePicker();
-    // final file = source == 'camera'
-    //     ? await picker.pickImage(source: ImageSource.camera)
-    //     : await picker.pickImage(source: ImageSource.gallery);
-    // if (file != null) _controller.analyzeImage(file.path);
-
-    // Mock trigger for now
-    _controller.analyzeImage('mock_path');
-  }
+  void _pickImage() => _ctrl.analyzeImage('mock_path');
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: _buildAppBar(context),
+      appBar: const FeatureAppBar(
+        title:   'Plant Disease Detection (CNN)',
+        svgPath: 'assets/images/icons/plant_icon.svg',
+      ),
       body: AnimatedBuilder(
-        animation: _controller,
-        builder: (_, __) => _buildBody(),
+        animation: _ctrl,
+        builder: (context, _) => _Body(ctrl: _ctrl, onPick: _pickImage),
       ),
     );
   }
+}
 
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
-    return AppBar(
-      backgroundColor: AppColors.surface,
-      elevation: 0,
-      surfaceTintColor: Colors.transparent,
-      leading: IconButton(
-        onPressed: () => Navigator.pop(context),
-        icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: AppColors.textDark),
-      ),
-      title: Row(
-        children: [
-          Container(
-            width: 32, height: 32,
-            decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(8)),
-            child: Center(child: SvgPicture.asset('assets/images/icons/plant_icon.svg', width: 18, height: 18)),
-          ),
-          const SizedBox(width: 10),
-          const Text('Plant Disease Detection',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-        ],
-      ),
-      bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(1),
-        child: Container(height: 1, color: AppColors.border),
-      ),
-    );
-  }
+// ─── Body ─────────────────────────────────────────────────────────────────────
 
-  Widget _buildBody() {
+class _Body extends StatelessWidget {
+  final PlantDiseaseController ctrl;
+  final VoidCallback onPick;
+  const _Body({required this.ctrl, required this.onPick});
+
+  @override
+  Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl, AppSpacing.lg, AppSpacing.xl, AppSpacing.xxxl),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 560),
+          constraints: const BoxConstraints(maxWidth: 600),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 8),
-
-              // ── Image preview area ──────────────────────────────────
-              _ImagePreviewCard(
-                imagePath: _controller.imagePath,
-                isLoading: _controller.status == PlantScanStatus.loading,
-                onReset: _controller.reset,
+              _PageHeading(
+                title:    'Plant Disease Detection',
+                subtitle: 'Upload a plant leaf image for AI-powered disease diagnosis using CNN',
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.xl),
 
-              // ── Pick source buttons ─────────────────────────────────
-              if (_controller.status == PlantScanStatus.idle ||
-                  _controller.status == PlantScanStatus.error) ...[
-                Row(
-                  children: [
-                    Expanded(
-                      child: _SourceButton(
-                        icon: Icons.camera_alt_outlined,
-                        label: 'Take Photo',
-                        onTap: () => _pickImage('camera'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _SourceButton(
-                        icon: Icons.photo_library_outlined,
-                        label: 'From Gallery',
-                        onTap: () => _pickImage('gallery'),
-                      ),
-                    ),
-                  ],
-                ),
+              _ImageCard(
+                imagePath: ctrl.imagePath,
+                isLoading: ctrl.status == PlantScanStatus.loading,
+                onPick:    onPick,
+                iconData:  Icons.eco_outlined,
+                analyzeLabel: 'Analyze Image',
+              ),
+              const SizedBox(height: AppSpacing.xl),
+
+              if (ctrl.status == PlantScanStatus.result &&
+                  ctrl.result != null) ...[
+                _AnalysisResultCard(result: ctrl.result!),
+                const SizedBox(height: AppSpacing.xl),
               ],
 
-              // ── Error ───────────────────────────────────────────────
-              if (_controller.status == PlantScanStatus.error) ...[
-                const SizedBox(height: 14),
-                _ErrorBanner(_controller.errorMessage ?? 'Unknown error'),
-              ],
-
-              // ── Result card ─────────────────────────────────────────
-              if (_controller.status == PlantScanStatus.result) ...[
-                const SizedBox(height: 16),
-                _PlantResultCard(
-                  label: _controller.resultLabel!,
-                  confidence: _controller.confidence!,
-                  onScanAgain: _controller.reset,
-                ),
-              ],
-
-              // ── Tips ────────────────────────────────────────────────
-              const SizedBox(height: 24),
-              _TipsCard(tips: const [
-                'Use clear, well-lit photos of affected leaves.',
-                'Capture both the front and back of the leaf.',
-                'Avoid shadows or blurry images.',
-                'One leaf per image gives best accuracy.',
-              ]),
+              if (ctrl.status == PlantScanStatus.error &&
+                  ctrl.errorMessage != null)
+                _ErrorBanner(ctrl.errorMessage!),
             ],
           ),
         ),
@@ -205,214 +149,246 @@ class _PlantDiseaseScreenState extends State<PlantDiseaseScreen> {
   }
 }
 
-// ─── Widgets ──────────────────────────────────────────────────────────────────
+// ─── Page heading ─────────────────────────────────────────────────────────────
 
-class _ImagePreviewCard extends StatelessWidget {
-  final String? imagePath;
-  final bool isLoading;
-  final VoidCallback onReset;
-
-  const _ImagePreviewCard({required this.imagePath, required this.isLoading, required this.onReset});
+class _PageHeading extends StatelessWidget {
+  final String title, subtitle;
+  const _PageHeading({required this.title, required this.subtitle});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      height: 220,
-      decoration: BoxDecoration(
-        color: AppColors.primaryLight,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.primary.withOpacity(0.25), width: 1.5),
-      ),
-      child: isLoading
-          ? const Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircularProgressIndicator(color: AppColors.primary, strokeWidth: 3),
-                SizedBox(height: 14),
-                Text('Analyzing image...', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w500)),
-              ],
-            )
-          : imagePath != null
-              ? Stack(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(15),
-                      child: Container(
-                        width: double.infinity, height: double.infinity,
-                        color: Colors.grey.shade200,
-                        child: const Center(child: Icon(Icons.image_rounded, size: 60, color: Colors.grey)),
-                      ),
-                    ),
-                    Positioned(
-                      top: 8, right: 8,
-                      child: GestureDetector(
-                        onTap: onReset,
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                          child: const Icon(Icons.close_rounded, size: 16, color: AppColors.textDark),
-                        ),
-                      ),
-                    ),
-                  ],
-                )
-              : Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 64, height: 64,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: const Icon(Icons.add_photo_alternate_outlined, size: 32, color: AppColors.primary),
-                    ),
-                    const SizedBox(height: 12),
-                    const Text('Upload a leaf image', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                    const SizedBox(height: 4),
-                    const Text('JPG or PNG, max 10MB', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
-                  ],
-                ),
+    final tt = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title,
+            style: tt.titleLarge?.copyWith(
+                fontWeight: FontWeight.w600, color: AppColors.textDark)),
+        const SizedBox(height: 4),
+        Text(subtitle,
+            style: tt.bodySmall?.copyWith(color: AppColors.textMuted)),
+      ],
     );
   }
 }
 
-class _SourceButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
+// ─── Image card (shared pattern) ─────────────────────────────────────────────
 
-  const _SourceButton({required this.icon, required this.label, required this.onTap});
+class _ImageCard extends StatelessWidget {
+  final String?      imagePath;
+  final bool         isLoading;
+  final VoidCallback onPick;
+  final IconData     iconData;
+  final String       analyzeLabel;
 
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.border),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 4)],
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: AppColors.primary, size: 26),
-            const SizedBox(height: 6),
-            Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textDark)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PlantResultCard extends StatelessWidget {
-  final String label;
-  final double confidence;
-  final VoidCallback onScanAgain;
-
-  const _PlantResultCard({required this.label, required this.confidence, required this.onScanAgain});
-
-  bool get _isHealthy => label.toLowerCase().contains('healthy');
+  const _ImageCard({
+    required this.imagePath,
+    required this.isLoading,
+    required this.onPick,
+    required this.iconData,
+    required this.analyzeLabel,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final color = _isHealthy ? AppColors.primary : const Color(0xFFEF4444);
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      width:   double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.06),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.3)),
+        color:        AppColors.surface,
+        borderRadius: AppRadius.radiusLg,
+        border:       Border.all(color: AppColors.border),
+        boxShadow:    AppShadows.sm,
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(_isHealthy ? Icons.check_circle_rounded : Icons.warning_amber_rounded, color: color, size: 22),
-              const SizedBox(width: 8),
-              Text('Detection Result', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: color)),
-            ],
+          Container(
+            width: 56, height: 56,
+            decoration: BoxDecoration(
+              color:        AppColors.primaryLight,
+              borderRadius: AppRadius.radiusMd,
+            ),
+            child: Icon(iconData, color: AppColors.primary, size: 28),
           ),
-          const SizedBox(height: 12),
-          Text(label, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              const Text('Confidence: ', style: TextStyle(fontSize: 13, color: AppColors.textMuted)),
-              Text('${(confidence * 100).toStringAsFixed(1)}%',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: color)),
-            ],
-          ),
-          const SizedBox(height: 6),
+          const SizedBox(height: AppSpacing.lg),
+
           ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: confidence, minHeight: 6,
-              backgroundColor: color.withOpacity(0.15),
-              valueColor: AlwaysStoppedAnimation(color),
-            ),
+            borderRadius: AppRadius.radiusMd,
+            child: isLoading
+                ? Container(
+                    width: double.infinity, height: 190,
+                    color: AppColors.surfaceAlt,
+                    child: const Center(
+                        child: CircularProgressIndicator(
+                            color: AppColors.primary)))
+                : imagePath != null
+                    ? Image.asset(imagePath!,
+                        width: double.infinity, height: 190,
+                        fit:   BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _placeholder())
+                    : _placeholder(),
           ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: onScanAgain,
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(color: color),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          const SizedBox(height: AppSpacing.xl),
+
+          Row(children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: onPick,
+                style: OutlinedButton.styleFrom(
+                  padding:         const EdgeInsets.symmetric(vertical: 14),
+                  side:            const BorderSide(color: AppColors.primary),
+                  shape:           RoundedRectangleBorder(
+                      borderRadius: AppRadius.radiusFull),
+                  backgroundColor: AppColors.primaryLight,
+                ),
+                child: const Text('Choose Image',
+                    style: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600)),
               ),
-              child: Text('Scan Another Image', style: TextStyle(color: color, fontWeight: FontWeight.w600)),
             ),
-          ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: ElevatedButton(
+                onPressed: onPick,
+                style: ElevatedButton.styleFrom(
+                  padding:         const EdgeInsets.symmetric(vertical: 14),
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape:           RoundedRectangleBorder(
+                      borderRadius: AppRadius.radiusFull),
+                  elevation: 0,
+                ),
+                child: Text(analyzeLabel,
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
+              ),
+            ),
+          ]),
         ],
       ),
     );
   }
+
+  Widget _placeholder() => Container(
+        width: double.infinity, height: 190, color: AppColors.surfaceAlt,
+        child: const Icon(Icons.image_outlined,
+            color: AppColors.textDisabled, size: 52));
 }
 
-class _TipsCard extends StatelessWidget {
-  final List<String> tips;
-  const _TipsCard({required this.tips});
+// ─── Analysis result card ─────────────────────────────────────────────────────
+
+class _AnalysisResultCard extends StatelessWidget {
+  final PlantDiseaseResult result;
+  const _AnalysisResultCard({required this.result});
 
   @override
   Widget build(BuildContext context) {
+    final tt    = Theme.of(context).textTheme;
+    final color = result.isHealthy ? AppColors.primary : AppColors.error;
+    final bgCol = result.isHealthy ? AppColors.primaryLight : AppColors.errorLight;
+    final borderCol = result.isHealthy
+        ? AppColors.primary.withOpacity(0.25)
+        : AppColors.errorBorder;
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      width:   double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        color:        AppColors.surface,
+        borderRadius: AppRadius.radiusLg,
+        border:       Border.all(color: AppColors.border),
+        boxShadow:    AppShadows.sm,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(children: [
-            Icon(Icons.lightbulb_outline_rounded, size: 16, color: Color(0xFFF59E0B)),
-            SizedBox(width: 6),
-            Text('Tips for best results', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-          ]),
-          const SizedBox(height: 10),
-          ...tips.map((t) => Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: Row(
+          Text('Analysis Result',
+              style: tt.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600, color: AppColors.textDark)),
+          const SizedBox(height: AppSpacing.lg),
+
+          // Status badge row
+          Container(
+            width:   double.infinity,
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+            decoration: BoxDecoration(
+              color:        bgCol,
+              borderRadius: AppRadius.radiusMd,
+              border:       Border.all(color: borderCol),
+            ),
+            child: Row(children: [
+              Icon(result.isHealthy
+                  ? Icons.check_circle_outline
+                  : Icons.warning_amber_outlined,
+                  color: color, size: 20),
+              const SizedBox(width: AppSpacing.sm),
+              RichText(
+                text: TextSpan(
+                  style: tt.bodyMedium,
+                  children: [
+                    TextSpan(
+                        text: 'Status: ',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textDark)),
+                    TextSpan(
+                        text: result.status,
+                        style: TextStyle(
+                            color: color, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+            ]),
+          ),
+          const SizedBox(height: AppSpacing.md),
+
+          // Confidence
+          Container(
+            width:   double.infinity,
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+            decoration: BoxDecoration(
+              color:        AppColors.surface,
+              borderRadius: AppRadius.radiusMd,
+              border:       Border.all(color: AppColors.border),
+            ),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('• ', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700)),
-                Expanded(child: Text(t, style: const TextStyle(fontSize: 12, color: AppColors.textMuted, height: 1.4))),
+                RichText(
+                  text: TextSpan(
+                    style: tt.bodyMedium?.copyWith(color: AppColors.textDark),
+                    children: [
+                      const TextSpan(
+                          text: 'Confidence: ',
+                          style: TextStyle(fontWeight: FontWeight.w600)),
+                      TextSpan(
+                          text:
+                              '${(result.confidence * 100).toStringAsFixed(0)}%'),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                ClipRRect(
+                  borderRadius: AppRadius.radiusFull,
+                  child: LinearProgressIndicator(
+                    value:           result.confidence,
+                    minHeight:       8,
+                    backgroundColor: const Color(0xFFE5E7EB),
+                    valueColor: AlwaysStoppedAnimation(color),
+                  ),
+                ),
               ],
             ),
-          )),
+          ),
         ],
       ),
     );
   }
 }
+
+// ─── Error banner ─────────────────────────────────────────────────────────────
 
 class _ErrorBanner extends StatelessWidget {
   final String message;
@@ -421,19 +397,23 @@ class _ErrorBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: const Color(0xFFFEF2F2),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFFECACA)),
+        color:        AppColors.errorLight,
+        borderRadius: AppRadius.radiusMd,
+        border:       Border.all(color: AppColors.errorBorder),
       ),
-      child: Row(
-        children: [
-          const Icon(Icons.error_outline, size: 16, color: Color(0xFFEF4444)),
-          const SizedBox(width: 8),
-          Expanded(child: Text(message, style: const TextStyle(fontSize: 13, color: Color(0xFFEF4444)))),
-        ],
-      ),
+      child: Row(children: [
+        const Icon(Icons.error_outline, size: 16, color: AppColors.error),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: Text(message,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: AppColors.error)),
+        ),
+      ]),
     );
   }
 }

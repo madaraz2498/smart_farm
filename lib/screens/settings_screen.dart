@@ -1,296 +1,282 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
-import '../utils/app_theme.dart';
+import '../theme/app_theme.dart';
+import '../widgets/custom_app_bar.dart';
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SETTINGS SCREEN
+// Layout (matches screenshot top → bottom):
+//   ⚙ Settings heading + subtitle
+//   Card: Profile Settings — Full Name / Email / Phone Number / Save Profile btn
+//   Card: Theme Preference — Light Mode (radio) / Dark Mode (radio)
+//   Card: Language Selection — dropdown (English / Arabic / French)
+//   Card: Notification Preferences — Push Notifications / Email Alerts (checkboxes)
+// ═══════════════════════════════════════════════════════════════════════════════
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
-
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  // Toggles
-  bool _notifDisease    = true;
-  bool _notifWeather    = true;
-  bool _notifReports    = false;
-  bool _darkMode        = false;
-  bool _autoScan        = true;
-  bool _biometric       = false;
-  String _language      = 'English';
-  String _units         = 'Metric (kg, °C)';
+  // Profile
+  final _nameCtrl  = TextEditingController(text: 'Farm Owner');
+  final _emailCtrl = TextEditingController(text: 'owner@smartfarm.com');
+  final _phoneCtrl = TextEditingController(text: '+1234567890');
 
-  final List<String> _languages = ['English', 'Arabic', 'French'];
-  final List<String> _unitSystems = ['Metric (kg, °C)', 'Imperial (lb, °F)'];
+  // Theme
+  String _themeMode = 'Light Mode';
+
+  // Language
+  String _language = 'English';
+  static const _languages = ['English', 'Arabic', 'French'];
+
+  // Notifications
+  bool _pushNotif   = true;
+  bool _emailAlerts = true;
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _emailCtrl.dispose();
+    _phoneCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AuthProvider>().user;
+    final tt = Theme.of(context).textTheme;
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.surface,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        leading: IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: AppColors.textDark),
-        ),
-        title: const Text('Settings',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(height: 1, color: AppColors.border),
-        ),
+      appBar: const FeatureAppBar(
+        title:    'Settings',
+        svgPath:  'assets/images/icons/crop_icon.svg',
+        showBack: false,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-
-              // ── Profile card ─────────────────────────────────────────
-              _buildProfileCard(user?.name ?? 'Farmer', user?.email ?? '', user?.role ?? ''),
-              const SizedBox(height: 24),
-
-              // ── Notifications ────────────────────────────────────────
-              _sectionTitle('Notifications'),
-              const SizedBox(height: 10),
-              _SettingsCard(children: [
-                _ToggleTile(
-                  icon: Icons.bug_report_outlined,
-                  color: const Color(0xFFEF4444),
-                  title: 'Disease Alerts',
-                  subtitle: 'Get notified when diseases are detected',
-                  value: _notifDisease,
-                  onChanged: (v) => setState(() => _notifDisease = v),
-                ),
-                _divider(),
-                _ToggleTile(
-                  icon: Icons.cloud_outlined,
-                  color: const Color(0xFF0EA5E9),
-                  title: 'Weather Alerts',
-                  subtitle: 'Receive weather warnings for your farm',
-                  value: _notifWeather,
-                  onChanged: (v) => setState(() => _notifWeather = v),
-                ),
-                _divider(),
-                _ToggleTile(
-                  icon: Icons.bar_chart_outlined,
-                  color: const Color(0xFF6366F1),
-                  title: 'Weekly Reports',
-                  subtitle: 'Get a summary every week',
-                  value: _notifReports,
-                  onChanged: (v) => setState(() => _notifReports = v),
-                ),
-              ]),
-              const SizedBox(height: 20),
-
-              // ── Preferences ──────────────────────────────────────────
-              _sectionTitle('Preferences'),
-              const SizedBox(height: 10),
-              _SettingsCard(children: [
-                _DropdownTile(
-                  icon: Icons.language_rounded,
-                  color: AppColors.primary,
-                  title: 'Language',
-                  value: _language,
-                  items: _languages,
-                  onChanged: (v) => setState(() => _language = v!),
-                ),
-                _divider(),
-                _DropdownTile(
-                  icon: Icons.straighten_rounded,
-                  color: const Color(0xFFF59E0B),
-                  title: 'Units',
-                  value: _units,
-                  items: _unitSystems,
-                  onChanged: (v) => setState(() => _units = v!),
-                ),
-                _divider(),
-                _ToggleTile(
-                  icon: Icons.dark_mode_outlined,
-                  color: const Color(0xFF6366F1),
-                  title: 'Dark Mode',
-                  subtitle: 'Switch to dark theme',
-                  value: _darkMode,
-                  onChanged: (v) => setState(() => _darkMode = v),
-                ),
-                _divider(),
-                _ToggleTile(
-                  icon: Icons.qr_code_scanner_rounded,
-                  color: AppColors.primary,
-                  title: 'Auto Scan',
-                  subtitle: 'Automatically start scan when image is loaded',
-                  value: _autoScan,
-                  onChanged: (v) => setState(() => _autoScan = v),
-                ),
-              ]),
-              const SizedBox(height: 20),
-
-              // ── Security ─────────────────────────────────────────────
-              _sectionTitle('Security'),
-              const SizedBox(height: 10),
-              _SettingsCard(children: [
-                _ToggleTile(
-                  icon: Icons.fingerprint_rounded,
-                  color: const Color(0xFF0EA5E9),
-                  title: 'Biometric Login',
-                  subtitle: 'Use fingerprint or face ID to sign in',
-                  value: _biometric,
-                  onChanged: (v) => setState(() => _biometric = v),
-                ),
-                _divider(),
-                _ActionTile(
-                  icon: Icons.lock_outline_rounded,
-                  color: const Color(0xFF8B5CF6),
-                  title: 'Change Password',
-                  subtitle: 'Update your account password',
-                  onTap: () => _showChangePasswordDialog(context),
-                ),
-              ]),
-              const SizedBox(height: 20),
-
-              // ── About ────────────────────────────────────────────────
-              _sectionTitle('About'),
-              const SizedBox(height: 10),
-              _SettingsCard(children: [
-                _ActionTile(
-                  icon: Icons.info_outline_rounded,
-                  color: AppColors.primary,
-                  title: 'App Version',
-                  subtitle: 'Smart Farm AI v1.0.0',
-                  onTap: null,
-                ),
-                _divider(),
-                _ActionTile(
-                  icon: Icons.description_outlined,
-                  color: const Color(0xFF6366F1),
-                  title: 'Terms of Service',
-                  subtitle: 'Read our terms and conditions',
-                  onTap: () {},
-                ),
-                _divider(),
-                _ActionTile(
-                  icon: Icons.privacy_tip_outlined,
-                  color: const Color(0xFF0EA5E9),
-                  title: 'Privacy Policy',
-                  subtitle: 'How we handle your data',
-                  onTap: () {},
-                ),
-              ]),
-              const SizedBox(height: 28),
-
-              // ── Logout button ─────────────────────────────────────────
-              _buildLogoutButton(context),
-              const SizedBox(height: 32),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ── Profile card ───────────────────────────────────────────────────────────
-  Widget _buildProfileCard(String name, String email, String role) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6, offset: const Offset(0, 2))],
-      ),
-      child: Row(
-        children: [
-          // Avatar
-          Container(
-            width: 64, height: 64,
-            decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
-            child: const Icon(Icons.person_rounded, color: Colors.white, size: 34),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
+        padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xl, AppSpacing.lg, AppSpacing.xl, AppSpacing.xxxl),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name,
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-                const SizedBox(height: 4),
-                Text(email,
-                    style: const TextStyle(fontSize: 13, color: AppColors.textMuted)),
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryLight,
-                    borderRadius: BorderRadius.circular(20),
+                // ── Page heading ─────────────────────────────────────────
+                Row(children: [
+                  Container(
+                    width: 32, height: 32,
+                    decoration: BoxDecoration(
+                      color:        AppColors.primaryLight,
+                      borderRadius: AppRadius.radiusSm,
+                    ),
+                    child: const Icon(Icons.settings_outlined,
+                        color: AppColors.primary, size: 18),
                   ),
-                  child: Text(role,
-                      style: const TextStyle(
-                          fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.primary)),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text('Settings',
+                      style: tt.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textDark)),
+                ]),
+                const SizedBox(height: 4),
+                Text('Manage your account and application preferences',
+                    style: tt.bodySmall?.copyWith(
+                        color: AppColors.textMuted)),
+                const SizedBox(height: AppSpacing.xl),
+
+                // ── Profile Settings card ─────────────────────────────────
+                _SectionCard(children: [
+                  _SectionHeader(
+                      icon: Icons.person_outline_rounded,
+                      title: 'Profile Settings'),
+                  const SizedBox(height: AppSpacing.xl),
+
+                  _FieldLabel('Full Name'),
+                  const SizedBox(height: AppSpacing.sm),
+                  _InputField(controller: _nameCtrl, hint: 'Full Name'),
+                  const SizedBox(height: AppSpacing.lg),
+
+                  _FieldLabel('Email'),
+                  const SizedBox(height: AppSpacing.sm),
+                  _InputField(
+                      controller: _emailCtrl,
+                      hint: 'Email',
+                      type: TextInputType.emailAddress),
+                  const SizedBox(height: AppSpacing.lg),
+
+                  _FieldLabel('Phone Number'),
+                  const SizedBox(height: AppSpacing.sm),
+                  _InputField(
+                      controller: _phoneCtrl,
+                      hint: 'Phone Number',
+                      type: TextInputType.phone),
+                  const SizedBox(height: AppSpacing.xl),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => _showSaved(context),
+                      style: ElevatedButton.styleFrom(
+                        padding:         const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        shape:           RoundedRectangleBorder(
+                            borderRadius: AppRadius.radiusFull),
+                        elevation: 0,
+                      ),
+                      child: const Text('Save Profile',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600, fontSize: 15)),
+                    ),
+                  ),
+                ]),
+                const SizedBox(height: AppSpacing.lg),
+
+                // ── Theme Preference card ─────────────────────────────────
+                _SectionCard(children: [
+                  _SectionHeader(
+                      icon: Icons.palette_outlined, title: 'Theme Preference'),
+                  const SizedBox(height: AppSpacing.md),
+
+                  _RadioRow(
+                    label:    'Light Mode',
+                    value:    'Light Mode',
+                    groupVal: _themeMode,
+                    onChanged: (v) => setState(() => _themeMode = v!),
+                  ),
+                  Divider(height: 1, color: AppColors.border),
+                  _RadioRow(
+                    label:    'Dark Mode',
+                    value:    'Dark Mode',
+                    groupVal: _themeMode,
+                    onChanged: (v) => setState(() => _themeMode = v!),
+                    filledDot: true,
+                  ),
+                ]),
+                const SizedBox(height: AppSpacing.lg),
+
+                // ── Language Selection card ───────────────────────────────
+                _SectionCard(children: [
+                  _SectionHeader(
+                      icon: Icons.language_rounded,
+                      title: 'Language Selection'),
+                  const SizedBox(height: AppSpacing.md),
+
+                  Container(
+                    decoration: BoxDecoration(
+                      color:        AppColors.surfaceAlt,
+                      borderRadius: AppRadius.radiusMd,
+                      border:       Border.all(color: AppColors.border),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.lg, vertical: 4),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value:      _language,
+                        isExpanded: true,
+                        icon: const Icon(Icons.keyboard_arrow_down_rounded,
+                            color: AppColors.textMuted),
+                        style: const TextStyle(
+                            fontSize: 14, color: AppColors.textDark),
+                        dropdownColor: AppColors.surface,
+                        borderRadius:  BorderRadius.circular(12),
+                        items: _languages
+                            .map((l) =>
+                                DropdownMenuItem(value: l, child: Text(l)))
+                            .toList(),
+                        onChanged: (v) => setState(() => _language = v!),
+                      ),
+                    ),
+                  ),
+                ]),
+                const SizedBox(height: AppSpacing.lg),
+
+                // ── Notification Preferences card ─────────────────────────
+                _SectionCard(children: [
+                  _SectionHeader(
+                      icon: Icons.notifications_outlined,
+                      title: 'Notification Preferences'),
+                  const SizedBox(height: AppSpacing.md),
+
+                  _CheckboxRow(
+                    label:    'Push Notifications',
+                    value:    _pushNotif,
+                    onChanged: (v) => setState(() => _pushNotif = v ?? true),
+                  ),
+                  Divider(height: 1, color: AppColors.border),
+                  _CheckboxRow(
+                    label:    'Email Alerts',
+                    value:    _emailAlerts,
+                    onChanged: (v) => setState(() => _emailAlerts = v ?? true),
+                  ),
+                ]),
+                const SizedBox(height: AppSpacing.xxl),
+
+                // ── Sign out button ───────────────────────────────────────
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showLogout(context),
+                    icon: const Icon(Icons.logout_rounded,
+                        size: 18, color: AppColors.error),
+                    label: const Text('Sign Out',
+                        style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.error)),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      side: const BorderSide(color: AppColors.error),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: AppRadius.radiusMd),
+                      backgroundColor: AppColors.errorLight,
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
-          // Edit button
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.edit_outlined, size: 20, color: AppColors.textMuted),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Logout button ──────────────────────────────────────────────────────────
-  Widget _buildLogoutButton(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 50,
-      child: OutlinedButton.icon(
-        onPressed: () => _showLogoutDialog(context),
-        icon: const Icon(Icons.logout_rounded, size: 18, color: Color(0xFFEF4444)),
-        label: const Text('Sign Out',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFFEF4444))),
-        style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          backgroundColor: const Color(0xFFFEF2F2),
         ),
       ),
     );
   }
 
-  // ── Logout confirmation dialog ─────────────────────────────────────────────
-  void _showLogoutDialog(BuildContext context) {
+  void _showSaved(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Profile saved'),
+        backgroundColor: AppColors.primary,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _showLogout(BuildContext context) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
-          children: [
-            Icon(Icons.logout_rounded, color: Color(0xFFEF4444), size: 22),
-            SizedBox(width: 10),
-            Text('Sign Out',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-          ],
-        ),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20)),
+        title: const Text('Sign Out',
+            style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textDark)),
         content: const Text(
-          'Are you sure you want to sign out of Smart Farm AI?',
-          style: TextStyle(fontSize: 14, color: AppColors.textMuted, height: 1.5),
+          'Are you sure you want to sign out?',
+          style: TextStyle(
+              fontSize: 14, color: AppColors.textMuted, height: 1.5),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel',
-                style: TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.w500)),
+                style: TextStyle(color: AppColors.textMuted)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -298,252 +284,219 @@ class _SettingsScreenState extends State<SettingsScreen> {
               context.read<AuthProvider>().logout();
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFEF4444),
+              backgroundColor: AppColors.error,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.w600)),
+            child: const Text('Sign Out',
+                style: TextStyle(fontWeight: FontWeight.w600)),
           ),
         ],
       ),
     );
   }
-
-  // ── Change password dialog ────────────────────────────────────────────────
-  void _showChangePasswordDialog(BuildContext context) {
-    final currentCtrl = TextEditingController();
-    final newCtrl = TextEditingController();
-    final confirmCtrl = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Change Password',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _dialogField(currentCtrl, 'Current password', obscure: true),
-            const SizedBox(height: 12),
-            _dialogField(newCtrl, 'New password', obscure: true),
-            const SizedBox(height: 12),
-            _dialogField(confirmCtrl, 'Confirm new password', obscure: true),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: const Text('Update', style: TextStyle(fontWeight: FontWeight.w600)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _dialogField(TextEditingController c, String hint, {bool obscure = false}) {
-    return TextField(
-      controller: c,
-      obscureText: obscure,
-      style: const TextStyle(fontSize: 14, color: AppColors.textDark),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(fontSize: 14, color: AppColors.textMuted),
-        filled: true,
-        fillColor: const Color(0xFFF9FAFB),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.border),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.border),
-        ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      ),
-    );
-  }
-
-  Widget _sectionTitle(String title) => Text(title,
-      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark));
-
-  Widget _divider() => Divider(height: 1, color: AppColors.border);
 }
 
-// ─── Settings card wrapper ────────────────────────────────────────────────────
+// ─── Section card wrapper ─────────────────────────────────────────────────────
 
-class _SettingsCard extends StatelessWidget {
+class _SectionCard extends StatelessWidget {
   final List<Widget> children;
-  const _SettingsCard({required this.children});
+  const _SectionCard({required this.children});
 
   @override
   Widget build(BuildContext context) {
     return Container(
+      width:   double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 4)],
+        color:        AppColors.surface,
+        borderRadius: AppRadius.radiusLg,
+        border:       Border.all(color: AppColors.border),
+        boxShadow:    AppShadows.sm,
       ),
-      child: Column(children: children),
+      child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: children),
     );
   }
 }
 
-// ─── Toggle tile ──────────────────────────────────────────────────────────────
+// ─── Section header (icon + title) ───────────────────────────────────────────
 
-class _ToggleTile extends StatelessWidget {
+class _SectionHeader extends StatelessWidget {
   final IconData icon;
-  final Color color;
-  final String title;
-  final String? subtitle;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  const _ToggleTile({
-    required this.icon, required this.color, required this.title,
-    this.subtitle, required this.value, required this.onChanged,
-  });
+  final String   title;
+  const _SectionHeader({required this.icon, required this.title});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Row(
-        children: [
-          Container(
-            width: 36, height: 36,
-            decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-            child: Icon(icon, color: color, size: 18),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textDark)),
-                if (subtitle != null)
-                  Text(subtitle!,
-                      style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
-              ],
-            ),
-          ),
-          Switch.adaptive(
-            value: value,
-            onChanged: onChanged,
-            activeColor: AppColors.primary,
-          ),
-        ],
+    final tt = Theme.of(context).textTheme;
+    return Row(children: [
+      Container(
+        width: 36, height: 36,
+        decoration: BoxDecoration(
+          color:        AppColors.primaryLight,
+          borderRadius: AppRadius.radiusMd,
+        ),
+        child: Icon(icon, color: AppColors.primary, size: 18),
       ),
-    );
+      const SizedBox(width: AppSpacing.md),
+      Text(title,
+          style: tt.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600, color: AppColors.textDark)),
+    ]);
   }
 }
 
-// ─── Dropdown tile ────────────────────────────────────────────────────────────
+// ─── Field label ──────────────────────────────────────────────────────────────
 
-class _DropdownTile extends StatelessWidget {
-  final IconData icon;
-  final Color color;
-  final String title;
-  final String value;
-  final List<String> items;
-  final ValueChanged<String?> onChanged;
+class _FieldLabel extends StatelessWidget {
+  final String text;
+  const _FieldLabel(this.text);
 
-  const _DropdownTile({
-    required this.icon, required this.color, required this.title,
-    required this.value, required this.items, required this.onChanged,
+  @override
+  Widget build(BuildContext context) => Text(text,
+      style: Theme.of(context)
+          .textTheme
+          .bodyMedium
+          ?.copyWith(color: AppColors.textDark));
+}
+
+// ─── Input field ──────────────────────────────────────────────────────────────
+
+class _InputField extends StatelessWidget {
+  final TextEditingController controller;
+  final String                hint;
+  final TextInputType         type;
+
+  const _InputField({
+    required this.controller,
+    required this.hint,
+    this.type = TextInputType.text,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Row(
-        children: [
-          Container(
-            width: 36, height: 36,
-            decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-            child: Icon(icon, color: color, size: 18),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(title,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textDark)),
-          ),
-          DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: value,
-              isDense: true,
-              icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textMuted, size: 18),
-              style: const TextStyle(fontSize: 13, color: AppColors.textMuted),
-              dropdownColor: AppColors.surface,
-              borderRadius: BorderRadius.circular(12),
-              items: items.map((i) => DropdownMenuItem(value: i, child: Text(i))).toList(),
-              onChanged: onChanged,
-            ),
-          ),
-        ],
+    return TextField(
+      controller:   controller,
+      keyboardType: type,
+      style: const TextStyle(fontSize: 14, color: AppColors.textDark),
+      decoration: InputDecoration(
+        hintText:   hint,
+        hintStyle:  const TextStyle(
+            fontSize: 14, color: AppColors.textDisabled),
+        filled:     true,
+        fillColor:  AppColors.surfaceAlt,
+        contentPadding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg, vertical: 14),
+        border: OutlineInputBorder(
+            borderRadius: AppRadius.radiusMd,
+            borderSide:   const BorderSide(color: AppColors.border)),
+        enabledBorder: OutlineInputBorder(
+            borderRadius: AppRadius.radiusMd,
+            borderSide:   const BorderSide(color: AppColors.border)),
+        focusedBorder: OutlineInputBorder(
+            borderRadius: AppRadius.radiusMd,
+            borderSide:   const BorderSide(
+                color: AppColors.primary, width: 1.5)),
       ),
     );
   }
 }
 
-// ─── Action tile ──────────────────────────────────────────────────────────────
+// ─── Radio row ────────────────────────────────────────────────────────────────
 
-class _ActionTile extends StatelessWidget {
-  final IconData icon;
-  final Color color;
-  final String title;
-  final String subtitle;
-  final VoidCallback? onTap;
+class _RadioRow extends StatelessWidget {
+  final String   label;
+  final String   value;
+  final String   groupVal;
+  final void Function(String?) onChanged;
+  final bool     filledDot;
 
-  const _ActionTile({
-    required this.icon, required this.color, required this.title,
-    required this.subtitle, required this.onTap,
+  const _RadioRow({
+    required this.label,
+    required this.value,
+    required this.groupVal,
+    required this.onChanged,
+    this.filledDot = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final tt        = Theme.of(context).textTheme;
+    final isSelected = value == groupVal;
+
     return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      onTap: () => onChanged(value),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            Container(
-              width: 36, height: 36,
-              decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-              child: Icon(icon, color: color, size: 18),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title,
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textDark)),
-                  Text(subtitle,
-                      style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
-                ],
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        child: Row(children: [
+          // Custom radio visual to match screenshot (filled circle)
+          Container(
+            width: 20, height: 20,
+            decoration: BoxDecoration(
+              shape:  BoxShape.circle,
+              border: Border.all(
+                color: isSelected ? AppColors.primary : AppColors.textMuted,
+                width: 2,
               ),
             ),
-            if (onTap != null)
-              const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.textMuted),
-          ],
-        ),
+            child: isSelected
+                ? Center(
+                    child: Container(
+                      width: 10, height: 10,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: filledDot
+                            ? AppColors.textDark
+                            : AppColors.primary,
+                      ),
+                    ),
+                  )
+                : null,
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Text(label,
+              style: tt.bodyMedium?.copyWith(color: AppColors.textDark)),
+        ]),
       ),
+    );
+  }
+}
+
+// ─── Checkbox row ─────────────────────────────────────────────────────────────
+
+class _CheckboxRow extends StatelessWidget {
+  final String label;
+  final bool   value;
+  final void Function(bool?) onChanged;
+
+  const _CheckboxRow({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tt = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(children: [
+        Expanded(
+          child: Text(label,
+              style: tt.bodyMedium?.copyWith(color: AppColors.textDark)),
+        ),
+        Checkbox(
+          value:           value,
+          onChanged:       onChanged,
+          activeColor:     AppColors.primary,
+          shape:           RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(4)),
+          side: const BorderSide(color: AppColors.primary, width: 1.5),
+        ),
+      ]),
     );
   }
 }
